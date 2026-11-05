@@ -18,6 +18,13 @@
  */
 'use strict';
 
+/* Compatibilità Chrome: in Chromium MV3 le API `chrome.*` restituiscono già
+ * Promise, quindi basta esporle come `browser`. Firefox ha `browser` nativo.
+ * Questo file è il primo caricato ovunque (popup, content script, background). */
+if (typeof globalThis.browser === 'undefined' && typeof globalThis.chrome !== 'undefined') {
+  globalThis.browser = globalThis.chrome;
+}
+
 // eslint-disable-next-line no-unused-vars
 const AST = (() => {
   const ENTRY_PREFIX = 'a:';

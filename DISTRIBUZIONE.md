@@ -62,3 +62,13 @@ La firma è automatica e arriva in pochi minuti. Lo installi una volta per brows
 
 Un workflow GitHub Actions può firmare l'estensione e creare la Release a ogni tag `v1.x`,
 usando le chiavi API salvate nei **Secrets** del repository (`AMO_JWT_ISSUER`, `AMO_JWT_SECRET`).
+
+## Chrome / Chromium
+
+- **Uso personale**: *Carica estensione non pacchettizzata* da `chrome://extensions` (Modalità sviluppatore) resta
+  installata anche dopo il riavvio, a differenza di Firefox. Va ricaricata a mano dopo ogni `git pull`.
+  Grazie al campo `key` nel manifest l'ID è sempre `benghggecnglpgoelfmafldckmabgano` su ogni PC.
+- **Chrome Web Store**: richiede un account sviluppatore (quota una tantum) e una revisione. Lo store assegna
+  la propria chiave: prima di caricare lo ZIP va rimosso il campo `key` dal manifest e va registrato su MAL
+  il nuovo redirect URL `https://<id-store>.chromiumapp.org/`.
+- I file `.crx` installati fuori dallo store sono bloccati da Chrome su Windows e macOS.

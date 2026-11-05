@@ -3,3 +3,4 @@ web-ext-artifacts/
 *.xpi
 node_modules/
 .DS_Store
+*.pem

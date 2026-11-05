@@ -2,14 +2,19 @@
   "manifest_version": 3,
   "name": "AnimeSaturn Tracker",
   "version": "1.0.0",
-  "description": "Traccia gli episodi visti su AnimeSaturn, li sincronizza con Firefox Sync e aggiorna la tua lista MyAnimeList.",
+  "description": "Traccia gli episodi visti su AnimeSaturn, li sincronizza tra i tuoi dispositivi (Firefox Sync / Chrome Sync) e aggiorna la tua lista MyAnimeList.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmV+DuGUIPcG0gw5XoB51VTqehpMmKgsUhzI8B0FO4+qm9rIMh2vXCM571Om53kRB0PBoDvmWxSC/El0fcoxfoFfBge5a1qX/5wp9pYobsN2OMgv3WpPuaQn0SSFuzVhp+XwY55KM4sW1CSIJLVXwuNxvCTB6g7DFyAyQHZ/M0V2F9HQZ2DX8iqv2+VBW0DT2WdqCZQL3ZpvlZ2SnnXqHY5lPfsHfQJ8LhgfKLibEtVPDFeUdVXCV3U5bw4r/gt3NKaT53PL8VvmUx9cTpA6n9pXb06IapV3pr610eligMBxNoKrZ3UeLRj4QXFtMHI9Yw0zpUm6eQJMWNkamEJ29vQIDAQAB",
   "browser_specific_settings": {
     "gecko": {
       "id": "animesaturn-tracker@local.ext",
-      "strict_min_version": "115.0"
+      "strict_min_version": "121.0"
     }
   },
-  "permissions": ["storage", "identity", "alarms"],
+  "permissions": [
+    "storage",
+    "identity",
+    "alarms"
+  ],
   "host_permissions": [
     "*://*.animesaturn.net/*",
     "*://*.animesaturn.me/*",
@@ -21,7 +26,12 @@
     "https://myanimelist.net/*"
   ],
   "background": {
-    "scripts": ["common.js", "mal_api.js", "background.js"]
+    "service_worker": "sw.js",
+    "scripts": [
+      "common.js",
+      "mal_api.js",
+      "background.js"
+    ]
   },
   "content_scripts": [
     {
@@ -33,15 +43,27 @@
         "*://*.animesaturn.in/*",
         "*://*.animesaturn.mx/*"
       ],
-      "js": ["common.js", "content.js"],
-      "css": ["content.css"],
+      "js": [
+        "common.js",
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
       "run_at": "document_idle"
     }
   ],
   "action": {
     "default_title": "AnimeSaturn Tracker",
     "default_popup": "popup.html",
-    "default_icon": { "16": "icons/icon.svg", "32": "icons/icon.svg", "48": "icons/icon.svg" }
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png"
+    }
   },
-  "icons": { "48": "icons/icon.svg", "96": "icons/icon.svg" }
+  "icons": {
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  }
 }

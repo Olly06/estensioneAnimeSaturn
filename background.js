@@ -101,13 +101,48 @@ async function putEntry(slug, entry) {
       }
       return entry;
     } catch (e) {
-      if (!/quota/i.test(String(e && e.message))) throw e;
+      if (!isSpaceQuotaError(e)) throw e;
       if (!(await archiveOldest(25))) break;
     }
   }
   // Ultima spiaggia: resta solo in locale.
   await patchLocalMap(LOCAL.ARCHIVE, slug, entry);
   return entry;
+}
+
+/** Quota di spazio esaurita (non il limite di scritture/minuto di Chrome). */
+function isSpaceQuotaError(e) {
+  const msg = String(e && e.message);
+  return /quota/i.test(msg) && !/WRITE_OPERATIONS/i.test(msg);
+}
+
+/** Scrittura in blocco (import): poche chiamate set() per restare sotto il limite
+ * di Chrome di 120 scritture/minuto su storage.sync. Le voci in eccesso o che non
+ * entrano nella quota finiscono nell'archivio locale. */
+async function putEntriesBulk(map) {
+  const all = await browser.storage.sync.get(null);
+  const existing = Object.keys(all).filter((k) => k.startsWith(AST.ENTRY_PREFIX) && !(k.slice(AST.ENTRY_PREFIX.length) in map));
+  const capacity = Math.max(0, MAX_SYNC_ENTRIES - existing.length);
+  const sorted = Object.entries(map).sort((a, b) => b[1].d - a[1].d);
+  const toArchive = sorted.slice(capacity);
+  const toSync = sorted.slice(0, capacity);
+  const synced = [];
+
+  for (let i = 0; i < toSync.length; i += 50) {
+    const chunk = toSync.slice(i, i + 50);
+    try {
+      await browser.storage.sync.set(Object.fromEntries(chunk.map(([slug, v]) => [AST.entryKey(slug), v])));
+      synced.push(...chunk);
+    } catch (e) {
+      if (!isSpaceQuotaError(e)) throw e;
+      toArchive.push(...chunk);
+    }
+  }
+
+  const archive = await getLocal(LOCAL.ARCHIVE);
+  for (const [slug] of synced) delete archive[slug];
+  for (const [slug, v] of toArchive) archive[slug] = v;
+  await browser.storage.local.set({ [LOCAL.ARCHIVE]: archive });
 }
 
 async function deleteEntry(slug) {
@@ -133,23 +168,36 @@ async function saveMeta(slug, meta) {
 
 /* ------------------------------------------------------------ metadati AnimeSaturn */
 
-/** Estrae mal_id/episodi totali dalla pagina anime (DOMParser disponibile nell'event page). */
-function parseAnimePage(html) {
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  const meta = {};
-  const malLink = doc.querySelector('a[href*="myanimelist.net/anime/"]');
-  const m = malLink && malLink.getAttribute('href').match(/myanimelist\.net\/anime\/(\d+)/);
-  if (m) meta.malId = Number(m[1]);
+function decodeEntities(s) {
+  const named = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+  return s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (all, code) => {
+    if (code[0] === '#') {
+      const n = code[1].toLowerCase() === 'x' ? parseInt(code.slice(2), 16) : parseInt(code.slice(1), 10);
+      return Number.isFinite(n) ? String.fromCodePoint(n) : all;
+    }
+    return named[code.toLowerCase()] ?? all;
+  });
+}
 
-  for (const label of doc.querySelectorAll('span')) {
-    const text = label.textContent.trim().toLowerCase();
-    const value = label.nextElementSibling && label.nextElementSibling.textContent.trim();
-    if (!value) continue;
-    if (text === 'episodi' && /^\d+$/.test(value)) meta.total = Number(value);
-    if (text === 'stato') meta.finished = /finit|conclus|completat/i.test(value);
-  }
-  const h1 = doc.querySelector('h1');
-  if (h1) meta.title = h1.textContent.trim();
+const stripTags = (s) => decodeEntities(s.replace(/<[^>]*>/g, ' ')).replace(/\s+/g, ' ').trim();
+
+/** Estrae mal_id/episodi totali/stato dalla pagina anime.
+ * Usa regex e non DOMParser: il service worker di Chrome non ha DOM. */
+function parseAnimePage(html) {
+  const meta = {};
+  const mal = html.match(/href="https?:\/\/(?:www\.)?myanimelist\.net\/anime\/(\d+)/i);
+  if (mal) meta.malId = Number(mal[1]);
+
+  // <span ...>Episodi</span> <span ...>170</span>
+  const eps = html.match(/>\s*Episodi\s*<\/span>\s*<span[^>]*>\s*(\d+)\s*</i);
+  if (eps) meta.total = Number(eps[1]);
+
+  // <span ...>Stato</span> <span ...><span ...>Finito</span>…
+  const stato = html.match(/>\s*Stato\s*<\/span>\s*<span[^>]*>(?:\s*<span[^>]*>)?\s*([^<]+)</i);
+  if (stato) meta.finished = /finit|conclus|completat/i.test(stato[1]);
+
+  const h1 = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+  if (h1) meta.title = stripTags(h1[1]);
   return meta;
 }
 
@@ -359,6 +407,7 @@ async function importData(data) {
     throw new Error('File di backup non riconosciuto');
   }
   let imported = 0;
+  const batch = {};
   await serial(async () => {
     for (const [slug, raw] of Object.entries(data.anime)) {
       if (!/^[\w.-]{1,120}$/.test(slug)) continue;
@@ -374,9 +423,10 @@ async function importData(data) {
           c: cur.c || inc.c,
         }
         : inc;
-      await putEntry(slug, merged);
+      batch[slug] = merged;
       imported++;
     }
+    await putEntriesBulk(batch);
     if (data.settings && typeof data.settings === 'object') {
       const s = data.settings;
       const patch = {};
@@ -474,18 +524,21 @@ const handlers = {
   importData: (msg) => importData(msg.data),
 };
 
-browser.runtime.onMessage.addListener((msg, sender) => {
+browser.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // Accetta messaggi solo dalla propria estensione (popup o content script).
-  if (sender.id !== browser.runtime.id) return undefined;
+  if (sender.id !== browser.runtime.id) return false;
   const h = msg && handlers[msg.type];
-  if (!h) return undefined;
-  // In Firefox restituire una Promise è il modo nativo di rispondere.
-  return Promise.resolve()
+  if (!h) return false;
+  // sendResponse + `return true` funziona sia in Firefox sia in Chrome
+  // (Chrome non supporta la Promise restituita dal listener).
+  Promise.resolve()
     .then(() => h(msg, sender))
     .catch((e) => {
       console.error('[AST]', msg.type, e);
       return { error: e.message || String(e) };
-    });
+    })
+    .then(sendResponse);
+  return true;
 });
 
 browser.alarms.onAlarm.addListener((alarm) => {
