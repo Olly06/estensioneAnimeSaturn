@@ -1,0 +1,5 @@
+web-ext-artifacts/
+*.zip
+*.xpi
+node_modules/
+.DS_Store

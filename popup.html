@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AnimeSaturn Tracker</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="icons/icon.svg" alt="" width="22" height="22">
+      <span>AnimeSaturn Tracker</span>
+    </div>
+    <span id="mal-pill" class="pill" title="Stato account MyAnimeList">MAL</span>
+  </header>
+
+  <button id="quick-continue" class="quick" hidden>
+    <span class="quick-play">▶</span>
+    <span class="quick-text">
+      <small>Continua da dove hai lasciato</small>
+      <strong id="quick-title"></strong>
+    </span>
+  </button>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" class="tab active" data-tab="ongoing" aria-selected="true">In corso</button>
+    <button role="tab" class="tab" data-tab="history" aria-selected="false">Storico</button>
+    <button role="tab" class="tab" data-tab="settings" aria-selected="false">Impostazioni</button>
+  </nav>
+
+  <main>
+    <!-- Scheda 1: In corso -->
+    <section id="tab-ongoing" class="panel" role="tabpanel">
+      <ul id="ongoing-list" class="list"></ul>
+      <p id="ongoing-empty" class="empty" hidden>
+        Nessun anime in corso.<br>Guarda un episodio su AnimeSaturn per iniziare.
+      </p>
+    </section>
+
+    <!-- Scheda 2: Storico -->
+    <section id="tab-history" class="panel" role="tabpanel" hidden>
+      <input id="search" class="search" type="search" placeholder="Cerca nello storico…" autocomplete="off">
+      <ul id="history-list" class="list"></ul>
+      <p id="history-empty" class="empty" hidden>Nessun risultato.</p>
+    </section>
+
+    <!-- Scheda 3: Impostazioni & Account -->
+    <section id="tab-settings" class="panel" role="tabpanel" hidden>
+      <div id="perm-warning" class="card warn" hidden>
+        <p>Firefox non ha ancora concesso l'accesso ai siti necessari.</p>
+        <button id="perm-grant" class="btn primary">Concedi permessi</button>
+      </div>
+
+      <div class="card">
+        <h3>Account MyAnimeList</h3>
+        <p id="account-status" class="muted">Non connesso</p>
+
+        <label class="field">
+          <span>Client ID (app MAL)</span>
+          <input id="client-id" type="text" spellcheck="false" placeholder="es. 1a2b3c4d…">
+        </label>
+        <label class="field">
+          <span>Redirect URL da registrare su MAL</span>
+          <span class="copy-row">
+            <input id="redirect-url" type="text" readonly>
+            <button id="copy-redirect" class="btn small" title="Copia">Copia</button>
+          </span>
+        </label>
+        <div class="row">
+          <button id="login-btn" class="btn primary">Login con MAL</button>
+          <button id="logout-btn" class="btn" hidden>Logout</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Scrobble</h3>
+        <label class="toggle-row">
+          <span>
+            Aggiorna automaticamente MAL
+            <small class="muted">Episodi visti e stato watching/completed</small>
+          </span>
+          <input id="scrobble-toggle" type="checkbox" class="switch">
+        </label>
+        <label class="toggle-row">
+          <span>
+            Conta l'episodio dopo
+            <small class="muted">Secondi sulla pagina del player (0 = subito)</small>
+          </span>
+          <input id="min-sec" type="number" min="0" max="600" step="5" class="num">
+        </label>
+        <button id="retry-all" class="btn small">Riprova sincronizzazioni in sospeso</button>
+      </div>
+
+      <div class="card">
+        <h3>Backup</h3>
+        <div class="row">
+          <button id="export-btn" class="btn">Esporta JSON</button>
+          <button id="import-btn" class="btn">Importa JSON</button>
+          <input id="import-file" type="file" accept="application/json,.json" hidden>
+        </div>
+        <p class="muted small">L'importazione unisce i dati: gli episodi visti vengono sommati, non sovrascritti.</p>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+
+  <template id="item-tpl">
+    <li class="item">
+      <img class="cover" alt="" loading="lazy">
+      <div class="info">
+        <div class="title"></div>
+        <div class="meta">
+          <span class="progress-text"></span>
+          <span class="sync" title=""></span>
+        </div>
+        <div class="bar"><div class="bar-fill"></div></div>
+        <div class="extra"></div>
+      </div>
+      <div class="actions"></div>
+    </li>
+  </template>
+
+  <script src="common.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

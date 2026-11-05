@@ -1,0 +1,47 @@
+{
+  "manifest_version": 3,
+  "name": "AnimeSaturn Tracker",
+  "version": "1.0.0",
+  "description": "Traccia gli episodi visti su AnimeSaturn, li sincronizza con Firefox Sync e aggiorna la tua lista MyAnimeList.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "animesaturn-tracker@local.ext",
+      "strict_min_version": "115.0"
+    }
+  },
+  "permissions": ["storage", "identity", "alarms"],
+  "host_permissions": [
+    "*://*.animesaturn.net/*",
+    "*://*.animesaturn.me/*",
+    "*://*.animesaturn.cx/*",
+    "*://*.animesaturn.tv/*",
+    "*://*.animesaturn.in/*",
+    "*://*.animesaturn.mx/*",
+    "https://api.myanimelist.net/*",
+    "https://myanimelist.net/*"
+  ],
+  "background": {
+    "scripts": ["common.js", "mal_api.js", "background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.animesaturn.net/*",
+        "*://*.animesaturn.me/*",
+        "*://*.animesaturn.cx/*",
+        "*://*.animesaturn.tv/*",
+        "*://*.animesaturn.in/*",
+        "*://*.animesaturn.mx/*"
+      ],
+      "js": ["common.js", "content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "AnimeSaturn Tracker",
+    "default_popup": "popup.html",
+    "default_icon": { "16": "icons/icon.svg", "32": "icons/icon.svg", "48": "icons/icon.svg" }
+  },
+  "icons": { "48": "icons/icon.svg", "96": "icons/icon.svg" }
+}

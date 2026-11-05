@@ -1,0 +1,50 @@
+/* content.css — indicatori discreti iniettati su AnimeSaturn (prefisso ast- per evitare collisioni). */
+
+/* Tile episodio: il check verde nativo del sito si attiva con .is-watched;
+   aggiungiamo solo un leggero attenuamento per distinguere a colpo d'occhio. */
+.ep-tile.ast-watched:not(.is-current) {
+  opacity: 0.72;
+}
+.ep-tile.ast-watched .ep-seen {
+  display: block;
+}
+.ep-tile.ast-last:not(.is-current) {
+  opacity: 1;
+  box-shadow: inset 0 0 0 2px #22c55e;
+}
+
+/* Card episodio (homepage, liste): pillola "Visto" in alto a sinistra. */
+.ast-rel {
+  position: relative;
+}
+.ast-card::after {
+  content: attr(data-ast-title);
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 5;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(22, 163, 74, 0.92);
+  color: #fff;
+  font: 600 10px/1.5 system-ui, sans-serif;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* Pulsante "Continua" sotto al titolo nella pagina anime. */
+.ast-continue {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: #22c55e;
+  color: #fff !important;
+  font: 600 13px/1.4 system-ui, sans-serif;
+  text-decoration: none !important;
+  transition: background 0.15s;
+}
+.ast-continue:hover {
+  background: #16a34a;
+}
