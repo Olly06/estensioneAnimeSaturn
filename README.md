@@ -8,3 +8,5 @@ Estensione Firefox (Manifest V3) che traccia gli episodi visti su AnimeSaturn, l
 3. Registra come Redirect URL quello mostrato nel popup (Impostazioni), poi incolla il Client ID e fai Login.
 
 Per la sincronizzazione multi-dispositivo abilita "Componenti aggiuntivi" in Firefox Sync.
+
+Per installarla in modo permanente su tutti i browser vedi [DISTRIBUZIONE.md](DISTRIBUZIONE.md).
