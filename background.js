@@ -208,6 +208,74 @@ async function fetchAnimeMeta(slug) {
   return saveMeta(slug, parseAnimePage(await res.text()));
 }
 
+/* ------------------------------------------------------------ voci importate da MAL
+ * Gli anime importati da MAL non hanno uno slug AnimeSaturn: usano lo slug
+ * segnaposto "mal-<id>". Quando l'anime viene guardato davvero su AnimeSaturn
+ * (e il suo mal_id è noto) il segnaposto viene assorbito nella voce reale.
+ */
+
+/** Da chiamare dentro serial(). Unisce e rimuove il segnaposto, se esiste. */
+async function absorbPlaceholder(slug, entry) {
+  if (!entry || !entry.m) return entry;
+  const ph = AST.placeholderSlug(entry.m);
+  if (ph === slug) return entry;
+  const old = await getEntry(ph);
+  if (!old) return entry;
+  const merged = {
+    ...entry,
+    w: AST.encodeRanges([...AST.decodeRanges(entry.w), ...AST.decodeRanges(old.w)]),
+    n: Math.max(entry.n || 0, old.n || 0),
+    c: entry.c || old.c,
+  };
+  await putEntry(slug, merged);
+  await deleteEntry(ph);
+  return merged;
+}
+
+/** Importa da MAL gli anime "completed" nella lista locale. */
+async function importFromMal() {
+  if (!(await MalApi.isLoggedIn())) throw new Error('Fai prima il login con MAL');
+  const list = await MalApi.getAnimeList('completed');
+  const batch = {};
+  let added = 0;
+  let updated = 0;
+  await serial(async () => {
+    const all = await getAllEntries();
+    const byMal = {};
+    for (const [slug, e] of Object.entries(all)) if (e.m) byMal[e.m] = slug;
+
+    for (const { node, list_status: ls = {} } of list) {
+      const total = Number(node.num_episodes) || 0;
+      const watched = total || Number(ls.num_episodes_watched) || 0;
+      if (!watched) continue;
+      const slug = byMal[node.id] || AST.placeholderSlug(node.id);
+      const cur = all[slug];
+      const range = AST.encodeRanges(AST.decodeRanges(`1-${watched}`));
+      if (cur) {
+        const w = AST.encodeRanges([...AST.decodeRanges(cur.w), ...AST.decodeRanges(range)]);
+        if (w === cur.w && cur.n >= total) continue;
+        batch[slug] = { ...cur, w, n: Math.max(cur.n || 0, total || watched) };
+        updated++;
+      } else {
+        const when = Date.parse(ls.finish_date || ls.updated_at || '') / 1000;
+        const pic = node.main_picture || {};
+        batch[slug] = {
+          t: String(node.title || slug).slice(0, 150),
+          e: watched,
+          w: range,
+          d: Number.isFinite(when) ? Math.floor(when) : 0,
+          m: node.id,
+          n: total || watched,
+          c: String(pic.medium || pic.large || '').slice(0, 300),
+        };
+        added++;
+      }
+    }
+    if (Object.keys(batch).length) await putEntriesBulk(batch);
+  });
+  return { added, updated, total: list.length };
+}
+
 /* ------------------------------------------------------------ MAL: associazione e scrobble */
 
 /** Restituisce il mal_id dell'anime (salvandolo nella voce sync), o 0 se non trovato. */
@@ -239,7 +307,11 @@ async function resolveMalId(slug) {
   if (malId) {
     await serial(async () => {
       const fresh = await getEntry(slug);
-      if (fresh && !fresh.m) await putEntry(slug, { ...fresh, m: malId, n: fresh.n || (meta && meta.finished && meta.total) || 0 });
+      if (fresh && !fresh.m) {
+        const next = { ...fresh, m: malId, n: fresh.n || (meta && meta.finished && meta.total) || 0 };
+        await putEntry(slug, next);
+        await absorbPlaceholder(slug, next);
+      }
     });
   }
   return malId;
@@ -347,7 +419,8 @@ async function onEpisodeViewed(p, sender) {
       n: prev.n || (meta && meta.finished && meta.total) || 0,
       c: AST.compactCover(p.cover) || prev.c || '',
     };
-    return putEntry(slug, next);
+    await putEntry(slug, next);
+    return absorbPlaceholder(slug, next);
   });
 
   scrobble(slug); // asincrono: la risposta al content script non attende MAL
@@ -369,7 +442,11 @@ async function onAnimeMeta(p) {
     const patch = {};
     if (!entry.m && meta.malId) patch.m = meta.malId;
     if (!entry.n && meta.finished && meta.total) patch.n = meta.total;
-    if (Object.keys(patch).length) await putEntry(slug, { ...entry, ...patch });
+    if (Object.keys(patch).length) {
+      const next = { ...entry, ...patch };
+      await putEntry(slug, next);
+      await absorbPlaceholder(slug, next);
+    }
   });
   return { ok: true };
 }
@@ -520,6 +597,7 @@ const handlers = {
     return { ok: true };
   },
 
+  importFromMal: () => importFromMal(),
   exportData: () => exportData(),
   importData: (msg) => importData(msg.data),
 };

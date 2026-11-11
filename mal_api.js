@@ -236,6 +236,20 @@ const MalApi = (() => {
     return request(`/anime/${encodeURIComponent(id)}/my_list_status`, { method: 'PATCH', form, requireAuth: true });
   }
 
+  /** Tutta la lista dell'utente per uno stato MAL (paginata, 1000 per pagina). */
+  async function getAnimeList(status = 'completed') {
+    const out = [];
+    for (let offset = 0; offset < 20000; offset += 1000) {
+      const data = await request('/users/@me/animelist', {
+        requireAuth: true,
+        query: { status, limit: 1000, offset, nsfw: 'true', fields: 'list_status,num_episodes,main_picture' },
+      });
+      out.push(...(data.data || []));
+      if (!data.paging || !data.paging.next) break;
+    }
+    return out;
+  }
+
   function getUser() {
     return request('/users/@me', { requireAuth: true });
   }
@@ -381,6 +395,7 @@ const MalApi = (() => {
     logout,
     isLoggedIn,
     getUser,
+    getAnimeList,
     searchAnime,
     getAnime,
     updateMyListStatus,

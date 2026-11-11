@@ -33,6 +33,7 @@
     <!-- Scheda 1: In corso -->
     <section id="tab-ongoing" class="panel" role="tabpanel">
       <ul id="ongoing-list" class="list"></ul>
+      <button id="ongoing-all" class="btn small see-all" hidden></button>
       <p id="ongoing-empty" class="empty" hidden>
         Nessun anime in corso.<br>Guarda un episodio su AnimeSaturn per iniziare.
       </p>
@@ -42,6 +43,7 @@
     <section id="tab-history" class="panel" role="tabpanel" hidden>
       <input id="search" class="search" type="search" placeholder="Cerca nello storico…" autocomplete="off">
       <ul id="history-list" class="list"></ul>
+      <button id="history-all" class="btn small see-all" hidden></button>
       <p id="history-empty" class="empty" hidden>Nessun risultato.</p>
     </section>
 
@@ -90,6 +92,12 @@
           <input id="min-sec" type="number" min="0" max="600" step="5" class="num">
         </label>
         <button id="retry-all" class="btn small">Riprova sincronizzazioni in sospeso</button>
+      </div>
+
+      <div class="card">
+        <h3>Importa da MAL</h3>
+        <button id="mal-import-btn" class="btn" hidden>Importa anime visti da MAL</button>
+        <p class="muted small">Aggiunge alla lista tutti gli anime "Completed" del tuo profilo MAL. Quelli già presenti vengono completati, non duplicati.</p>
       </div>
 
       <div class="card">

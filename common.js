@@ -72,6 +72,10 @@ const AST = (() => {
     return !!entry && entry.n > 0 && maxWatched(entry) >= entry.n;
   }
 
+  /** Slug segnaposto per anime importati da MAL (senza slug AnimeSaturn). */
+  const placeholderSlug = (malId) => `mal-${malId}`;
+  const isPlaceholder = (slug) => /^mal-\d+$/.test(slug);
+
   const entryKey = (slug) => ENTRY_PREFIX + slug;
 
   function trimBase(base) {
@@ -80,6 +84,24 @@ const AST = (() => {
 
   function episodeUrl(base, slug, ep) {
     return `${trimBase(base)}/anime/${encodeURIComponent(slug)}/ep-${ep}`;
+  }
+
+  /** Versione corta del titolo per la ricerca: senza sottotitolo, stagione/parte e rumore. */
+  function shortTitle(title) {
+    let t = String(title || '')
+      .replace(/\((?:sub\s*)?ita\)/gi, ' ')
+      .split(/\s*[:–—]\s*|\s+-\s+/)[0]
+      .replace(/\b(?:\d+(?:st|nd|rd|th)|first|second|third|fourth|final)\s+season\b/gi, ' ')
+      .replace(/\b(?:season|stagione|part|cour)\s*\d+\b/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const words = t.split(' ');
+    if (words.length > 3) t = words.slice(0, 3).join(' ');
+    return t || String(title || '').trim();
+  }
+
+  function searchUrl(base, title, short = false) {
+    return `${trimBase(base)}/filter?key=${encodeURIComponent(short ? shortTitle(title) : title)}`;
   }
 
   function animeUrl(base, slug) {
@@ -112,8 +134,12 @@ const AST = (() => {
     maxWatched,
     isCompleted,
     entryKey,
+    placeholderSlug,
+    isPlaceholder,
     episodeUrl,
     animeUrl,
+    searchUrl,
+    shortTitle,
     compactCover,
     coverUrl,
     getSettings,

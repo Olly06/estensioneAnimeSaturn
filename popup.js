@@ -9,6 +9,7 @@ const $ = (sel) => document.querySelector(sel);
 const params = new URLSearchParams(location.search);
 const IS_PAGE = params.has('page'); // aperto in una scheda invece che come popup
 
+const POPUP_LIMIT = 10; // nel popup solo gli ultimi 10; la lista completa è nella pagina intera
 let state = null;
 let activeTab = 'ongoing';
 
@@ -71,7 +72,10 @@ async function openUrl(url) {
   window.close();
 }
 
-function openEpisode(slug, ep) {
+function openEpisode(slug, ep, title = '', short = false) {
+  // Anime importato da MAL: nessuno slug AnimeSaturn, si apre la ricerca per titolo
+  // (Shift+clic = titolo abbreviato).
+  if (AST.isPlaceholder(slug)) return openUrl(AST.searchUrl(state.settings.base, title, short));
   return openUrl(AST.episodeUrl(state.settings.base, slug, ep));
 }
 
@@ -140,9 +144,11 @@ function buildItem(slug, entry, mode) {
   actions.append(
     el('button', {
       class: 'icon-btn play',
-      title: `Riprendi episodio ${entry.e}`,
+      title: AST.isPlaceholder(slug)
+        ? `Cerca su AnimeSaturn (Shift: "${AST.shortTitle(entry.t)}")`
+        : `Riprendi episodio ${entry.e}`,
       text: '▶',
-      onclick: () => openEpisode(slug, entry.e),
+      onclick: (ev) => openEpisode(slug, entry.e, entry.t, ev.shiftKey),
     }),
   );
   if (mode === 'ongoing' && (!n || entry.e < n)) {
@@ -151,7 +157,7 @@ function buildItem(slug, entry, mode) {
         class: 'icon-btn',
         title: `Episodio successivo (${entry.e + 1})`,
         text: '⏭',
-        onclick: () => openEpisode(slug, entry.e + 1),
+        onclick: (ev) => openEpisode(slug, entry.e + 1, entry.t, ev.shiftKey),
       }),
     );
   }
@@ -227,19 +233,30 @@ function toggleMalForm(item, slug, entry) {
   input.focus();
 }
 
+const limited = (items) => (IS_PAGE ? items : items.slice(0, POPUP_LIMIT));
+
+/** Nel popup: pulsante "Vedi tutti" che apre la pagina completa in una scheda. */
+function renderSeeAll(sel, count) {
+  const btn = $(sel);
+  const more = !IS_PAGE && count > POPUP_LIMIT;
+  btn.hidden = !more;
+  if (more) btn.textContent = `Vedi tutti (${count}) ↗`;
+}
+
 function renderOngoing() {
   const list = $('#ongoing-list');
   list.replaceChildren();
   const items = sortedEntries().filter(({ entry }) => !AST.isCompleted(entry));
-  for (const { slug, entry } of items) list.append(buildItem(slug, entry, 'ongoing'));
+  for (const { slug, entry } of limited(items)) list.append(buildItem(slug, entry, 'ongoing'));
   $('#ongoing-empty').hidden = items.length > 0;
+  renderSeeAll('#ongoing-all', items.length);
 
   const quick = $('#quick-continue');
   const first = items[0];
   quick.hidden = !first;
   if (first) {
     $('#quick-title').textContent = `${first.entry.t} · Ep ${first.entry.e}`;
-    quick.onclick = () => openEpisode(first.slug, first.entry.e);
+    quick.onclick = (ev) => openEpisode(first.slug, first.entry.e, first.entry.t, ev.shiftKey);
   }
 }
 
@@ -248,8 +265,9 @@ function renderHistory() {
   const list = $('#history-list');
   list.replaceChildren();
   const items = sortedEntries().filter(({ slug, entry }) => !q || normalizeQuery(`${entry.t} ${slug}`).includes(q));
-  for (const { slug, entry } of items) list.append(buildItem(slug, entry, 'history'));
+  for (const { slug, entry } of limited(items)) list.append(buildItem(slug, entry, 'history'));
   $('#history-empty').hidden = items.length > 0;
+  renderSeeAll('#history-all', items.length);
 }
 
 function normalizeQuery(s) {
@@ -275,6 +293,7 @@ function renderSettings() {
     : 'Non connesso';
   $('#login-btn').hidden = auth.loggedIn;
   $('#logout-btn').hidden = !auth.loggedIn;
+  $('#mal-import-btn').hidden = !auth.loggedIn;
 
   const pill = $('#mal-pill');
   pill.classList.toggle('on', auth.loggedIn);
@@ -331,6 +350,13 @@ function bindEvents() {
 
   $('#search').addEventListener('input', renderHistory);
 
+  for (const id of ['#ongoing-all', '#history-all']) {
+    $(id).addEventListener('click', async () => {
+      await browser.tabs.create({ url: browser.runtime.getURL(`popup.html?page=1&tab=${activeTab}`) });
+      window.close();
+    });
+  }
+
   $('#perm-grant').addEventListener('click', () => {
     // permissions.request deve partire in modo sincrono dal gesto utente.
     browser.permissions.request({ origins: REQUIRED_ORIGINS }).then(checkPermissions);
@@ -384,6 +410,21 @@ function bindEvents() {
   $('#retry-all').addEventListener('click', async () => {
     await send('retrySync');
     toast('Sincronizzazione avviata');
+  });
+
+  $('#mal-import-btn').addEventListener('click', async () => {
+    const btn = $('#mal-import-btn');
+    btn.disabled = true;
+    btn.textContent = 'Importo da MAL…';
+    try {
+      const r = await send('importFromMal');
+      toast(`MAL: ${r.added} nuovi, ${r.updated} aggiornati (${r.total} completati)`);
+    } catch (e) {
+      toast(e.message, true);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Importa anime visti da MAL';
+    }
   });
 
   $('#export-btn').addEventListener('click', async () => {
