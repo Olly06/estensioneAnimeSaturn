@@ -26,11 +26,11 @@
     "https://myanimelist.net/*"
   ],
   "background": {
-    "service_worker": "sw.js",
+    "service_worker": "background/sw.js",
     "scripts": [
-      "common.js",
-      "mal_api.js",
-      "background.js"
+      "lib/common.js",
+      "lib/mal_api.js",
+      "background/background.js"
     ]
   },
   "content_scripts": [
@@ -44,18 +44,18 @@
         "*://*.animesaturn.mx/*"
       ],
       "js": [
-        "common.js",
-        "content.js"
+        "lib/common.js",
+        "content/content.js"
       ],
       "css": [
-        "content.css"
+        "content/content.css"
       ],
       "run_at": "document_idle"
     }
   ],
   "action": {
     "default_title": "AnimeSaturn Tracker",
-    "default_popup": "popup.html",
+    "default_popup": "popup/popup.html",
     "default_icon": {
       "16": "icons/icon-16.png",
       "32": "icons/icon-32.png",

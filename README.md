@@ -4,9 +4,9 @@ Estensione per **Firefox e Chrome/Chromium** (Manifest V3) che traccia gli episo
 
 ## Installazione per sviluppo
 
-**Firefox** (121+): `about:debugging` → *Questo Firefox* → *Carica componente aggiuntivo temporaneo…* → `manifest.json`.
+**Firefox** (121+): `about:debugging` → *Questo Firefox* → *Carica componente aggiuntivo temporaneo…* → `src/manifest.json`.
 
-**Chrome / Edge / Brave**: `chrome://extensions` → attiva *Modalità sviluppatore* → *Carica estensione non pacchettizzata* → seleziona questa cartella.
+**Chrome / Edge / Brave**: `chrome://extensions` → attiva *Modalità sviluppatore* → *Carica estensione non pacchettizzata* → seleziona la cartella `src/`.
 
 ## Configurazione MyAnimeList
 1. Crea un'app su https://myanimelist.net/apiconfig (App Type: **other**).
@@ -24,8 +24,20 @@ oppure tra i Chrome (Chrome Sync, voce "Estensioni"). **Non** si sincronizzano t
 per passare da uno all'altro usa Esporta/Importa JSON, oppure lascia che MAL faccia da riferimento comune.
 
 ## Note tecniche sulla compatibilità
-- `common.js` espone `chrome` come `browser` su Chromium (le API MV3 di Chrome restituiscono già Promise).
-- Il manifest dichiara sia `background.scripts` (usato da Firefox) sia `background.service_worker` (`sw.js`, usato da Chrome).
+- `src/lib/common.js` espone `chrome` come `browser` su Chromium (le API MV3 di Chrome restituiscono già Promise).
+- Il manifest dichiara sia `background.scripts` (usato da Firefox) sia `background.service_worker` (`src/background/sw.js`, usato da Chrome).
 - Il campo `key` del manifest fissa l'ID dell'estensione in Chrome, così il redirect URL è identico su ogni PC.
 
 Per installarla in modo permanente su tutti i browser vedi [DISTRIBUZIONE.md](DISTRIBUZIONE.md).
+
+## Struttura
+
+```
+src/
+├── manifest.json
+├── background/   # background.js (logica), sw.js (entry service worker Chrome)
+├── content/      # content.js/css iniettati su AnimeSaturn
+├── popup/        # popup.html/css/js (popup e pagina intera)
+├── lib/          # common.js, mal_api.js (condivisi)
+└── icons/
+```

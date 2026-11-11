@@ -9,9 +9,9 @@ Per installarlo in modo permanente, Firefox (versione stabile) richiede un file 
 La firma è automatica e arriva in pochi minuti. Lo installi una volta per browser e da lì si aggiorna da solo.
 
 1. **Chiavi API**: generale su <https://addons.mozilla.org/developers/addon/api/key/> (serve un account Firefox).
-2. **Firma**, dalla cartella del progetto:
+2. **Firma**, dalla radice del progetto (l'estensione vive in `src/`):
    ```bash
-   npx web-ext sign --channel=unlisted \
+   npx web-ext sign --source-dir=src --channel=unlisted \
      --api-key=TUA_JWT_ISSUER --api-secret=TUO_JWT_SECRET
    ```
    Il file `.xpi` firmato finisce in `web-ext-artifacts/`.

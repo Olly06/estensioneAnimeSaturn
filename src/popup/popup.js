@@ -352,7 +352,7 @@ function bindEvents() {
 
   for (const id of ['#ongoing-all', '#history-all']) {
     $(id).addEventListener('click', async () => {
-      await browser.tabs.create({ url: browser.runtime.getURL(`popup.html?page=1&tab=${activeTab}`) });
+      await browser.tabs.create({ url: browser.runtime.getURL(`popup/popup.html?page=1&tab=${activeTab}`) });
       window.close();
     });
   }
@@ -445,7 +445,7 @@ function bindEvents() {
   $('#import-btn').addEventListener('click', () => {
     if (!IS_PAGE) {
       // In Firefox il popup si chiude all'apertura del file picker: si usa una scheda.
-      browser.tabs.create({ url: browser.runtime.getURL('popup.html?page=1&tab=settings') });
+      browser.tabs.create({ url: browser.runtime.getURL('popup/popup.html?page=1&tab=settings') });
       window.close();
       return;
     }
